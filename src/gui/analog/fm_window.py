@@ -8,10 +8,14 @@ from PySide6.QtWidgets import (
     QGridLayout,
     QSlider,
     QLineEdit,
-    QPushButton
+    QPushButton,
+    QHBoxLayout
 )
 
 from PySide6.QtCore import Qt, QTimer
+
+# SMOOTH CURVES
+pg.setConfigOptions(antialias=True)
 
 
 class FMWindow(QWidget):
@@ -22,7 +26,7 @@ class FMWindow(QWidget):
 
         self.setWindowTitle("FM Modulation")
 
-        self.resize(1400, 900)
+        self.resize(1600, 900)
 
         self.phase = 0
 
@@ -33,13 +37,24 @@ class FMWindow(QWidget):
         # TIMER
         self.timer = QTimer()
 
-        self.timer.timeout.connect(self.update_waveforms)
+        self.timer.timeout.connect(
+            self.update_waveforms
+        )
 
         self.timer.start(30)
 
     def setup_ui(self):
 
         main_layout = QVBoxLayout()
+
+        main_layout.setSpacing(6)
+
+        main_layout.setContentsMargins(
+            10,
+            10,
+            10,
+            10
+        )
 
         # TITLE
         title = QLabel("FREQUENCY MODULATION")
@@ -48,9 +63,10 @@ class FMWindow(QWidget):
 
         title.setStyleSheet("""
 
-            font-size: 28px;
+            font-size: 22px;
             font-weight: bold;
             color: cyan;
+            padding: 4px;
 
         """)
 
@@ -65,8 +81,9 @@ class FMWindow(QWidget):
 
         definition.setStyleSheet("""
 
-            font-size: 16px;
-            padding: 5px;
+            font-size: 13px;
+            color: white;
+            padding: 2px;
 
         """)
 
@@ -81,38 +98,88 @@ class FMWindow(QWidget):
 
         formula.setStyleSheet("""
 
-            font-size: 22px;
+            font-size: 18px;
             font-weight: bold;
-            background-color: #222;
+            background-color: #1a1a1a;
             color: cyan;
-            padding: 15px;
-            border-radius: 10px;
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid cyan;
 
         """)
 
         main_layout.addWidget(formula)
 
-        # PAUSE BUTTON
-        self.pause_button = QPushButton("Pause")
+        # BUTTONS
+        button_layout = QHBoxLayout()
 
-        self.pause_button.setStyleSheet("""
-
-            font-size: 16px;
-            padding: 10px;
-
-        """)
+        self.pause_button = QPushButton(
+            "Pause"
+        )
 
         self.pause_button.clicked.connect(
             self.toggle_animation
         )
 
-        main_layout.addWidget(self.pause_button)
+        self.fit_button = QPushButton(
+            "Fit Waveform"
+        )
+
+        self.fit_button.clicked.connect(
+            self.reset_view
+        )
+
+        button_style = """
+
+            QPushButton {
+
+                background-color: #222;
+                color: white;
+                padding: 8px;
+                border-radius: 6px;
+                border: 1px solid cyan;
+                font-size: 13px;
+
+            }
+
+            QPushButton:hover {
+
+                background-color: cyan;
+                color: black;
+
+            }
+
+        """
+
+        self.pause_button.setStyleSheet(
+            button_style
+        )
+
+        self.fit_button.setStyleSheet(
+            button_style
+        )
+
+        button_layout.addWidget(
+            self.pause_button
+        )
+
+        button_layout.addWidget(
+            self.fit_button
+        )
+
+        main_layout.addLayout(
+            button_layout
+        )
 
         # PARAMETERS
         parameter_layout = QGridLayout()
 
+        parameter_layout.setVerticalSpacing(6)
+
         # MESSAGE FREQUENCY
-        self.msg_freq_slider = QSlider(Qt.Horizontal)
+        self.msg_freq_slider = QSlider(
+            Qt.Horizontal
+        )
 
         self.msg_freq_slider.setMinimum(1)
 
@@ -141,7 +208,9 @@ class FMWindow(QWidget):
         )
 
         # CARRIER FREQUENCY
-        self.carrier_freq_slider = QSlider(Qt.Horizontal)
+        self.carrier_freq_slider = QSlider(
+            Qt.Horizontal
+        )
 
         self.carrier_freq_slider.setMinimum(10)
 
@@ -170,7 +239,9 @@ class FMWindow(QWidget):
         )
 
         # MODULATION INDEX
-        self.mod_index_slider = QSlider(Qt.Horizontal)
+        self.mod_index_slider = QSlider(
+            Qt.Horizontal
+        )
 
         self.mod_index_slider.setMinimum(1)
 
@@ -199,7 +270,9 @@ class FMWindow(QWidget):
         )
 
         # MESSAGE AMPLITUDE
-        self.msg_amp_slider = QSlider(Qt.Horizontal)
+        self.msg_amp_slider = QSlider(
+            Qt.Horizontal
+        )
 
         self.msg_amp_slider.setMinimum(1)
 
@@ -227,81 +300,153 @@ class FMWindow(QWidget):
             2
         )
 
-        main_layout.addLayout(parameter_layout)
+        main_layout.addLayout(
+            parameter_layout
+        )
 
         # CURSOR LABEL
         self.cursor_label = QLabel(
-            "Time: 0.000 s    Amplitude: 0.000"
+            "Move cursor over graphs to inspect waveform values"
         )
 
         self.cursor_label.setStyleSheet("""
 
-            font-size: 14px;
+            font-size: 12px;
             color: yellow;
+            padding: 3px;
 
         """)
 
-        main_layout.addWidget(self.cursor_label)
+        main_layout.addWidget(
+            self.cursor_label
+        )
 
         # PLOTS
-        self.message_plot = pg.PlotWidget(
-            title="Message Signal"
+        self.message_plot = pg.PlotWidget()
+
+        self.carrier_plot = pg.PlotWidget()
+
+        self.fm_plot = pg.PlotWidget()
+
+        plots = [
+
+            self.message_plot,
+            self.carrier_plot,
+            self.fm_plot
+
+        ]
+
+        # STYLE ALL PLOTS
+        for plot in plots:
+
+            plot.setBackground(
+                "#0d1117"
+            )
+
+            plot.showGrid(
+                x=True,
+                y=True,
+                alpha=0.3
+            )
+
+            plot.setLabel(
+                'left',
+                'Amplitude'
+            )
+
+            plot.setLabel(
+                'bottom',
+                'Time'
+            )
+
+            plot.setMouseEnabled(
+                x=True,
+                y=True
+            )
+
+            plot.getViewBox().setDefaultPadding(
+                0.08
+            )
+
+            plot.setMinimumHeight(170)
+
+        # TITLES
+        self.message_plot.setTitle(
+            "Message Signal",
+            color="cyan",
+            size="14pt"
         )
 
-        self.carrier_plot = pg.PlotWidget(
-            title="Carrier Signal"
+        self.carrier_plot.setTitle(
+            "Carrier Signal",
+            color="yellow",
+            size="14pt"
         )
 
-        self.fm_plot = pg.PlotWidget(
-            title="FM Signal"
+        self.fm_plot.setTitle(
+            "FM Signal",
+            color="lightgreen",
+            size="14pt"
         )
 
-        main_layout.addWidget(self.message_plot)
+        # ADD PLOTS
+        main_layout.addWidget(
+            self.message_plot,
+            stretch=1
+        )
 
-        main_layout.addWidget(self.carrier_plot)
+        main_layout.addWidget(
+            self.carrier_plot,
+            stretch=1
+        )
 
-        main_layout.addWidget(self.fm_plot)
+        main_layout.addWidget(
+            self.fm_plot,
+            stretch=1
+        )
 
         self.setLayout(main_layout)
 
         # CURVES
         self.message_curve = self.message_plot.plot(
-            pen=pg.mkPen('g', width=2)
+            pen=pg.mkPen(
+                '#00ff99',
+                width=2
+            )
         )
 
         self.carrier_curve = self.carrier_plot.plot(
-            pen=pg.mkPen('y', width=2)
+            pen=pg.mkPen(
+                '#ffff00',
+                width=2
+            )
         )
 
         self.fm_curve = self.fm_plot.plot(
-            pen=pg.mkPen('m', width=2)
+            pen=pg.mkPen(
+                '#00ffff',
+                width=2
+            )
         )
-
-        # GRID
-        self.message_plot.showGrid(x=True, y=True)
-
-        self.carrier_plot.showGrid(x=True, y=True)
-
-        self.fm_plot.showGrid(x=True, y=True)
 
         # CONNECT SLIDERS
         self.msg_freq_slider.valueChanged.connect(
-            self.update_inputs
+            self.parameters_changed
         )
 
         self.carrier_freq_slider.valueChanged.connect(
-            self.update_inputs
+            self.parameters_changed
         )
 
         self.mod_index_slider.valueChanged.connect(
-            self.update_inputs
+            self.parameters_changed
         )
 
         self.msg_amp_slider.valueChanged.connect(
-            self.update_inputs
+            self.parameters_changed
         )
 
-        # CONNECT INPUT BOXES
+        # CONNECT INPUTS
         self.msg_freq_input.editingFinished.connect(
             self.update_sliders
         )
@@ -318,45 +463,104 @@ class FMWindow(QWidget):
             self.update_sliders
         )
 
-        # MOUSE TRACKING
+        # CURSOR TRACKING
+        self.message_plot.scene().sigMouseMoved.connect(
+            self.message_mouse_moved
+        )
+
+        self.carrier_plot.scene().sigMouseMoved.connect(
+            self.carrier_mouse_moved
+        )
+
         self.fm_plot.scene().sigMouseMoved.connect(
-            self.mouse_moved
+            self.fm_mouse_moved
+        )
+
+        # INITIAL DRAW
+        self.update_waveforms()
+
+    def reset_view(self):
+
+        amplitude = self.msg_amp_slider.value()
+
+        self.message_plot.setXRange(
+            -0.2,
+            1.2
+        )
+
+        self.message_plot.setYRange(
+            -amplitude - 1,
+            amplitude + 1
+        )
+
+        self.carrier_plot.setXRange(
+            -0.2,
+            1.2
+        )
+
+        self.carrier_plot.setYRange(
+            -1.5,
+            1.5
+        )
+
+        self.fm_plot.setXRange(
+            -0.2,
+            1.2
+        )
+
+        self.fm_plot.setYRange(
+            -1.5,
+            1.5
         )
 
     def toggle_animation(self):
 
         if self.is_running:
 
-            self.timer.stop()
-
-            self.pause_button.setText("Resume")
+            self.pause_button.setText(
+                "Resume"
+            )
 
             self.is_running = False
 
         else:
 
-            self.timer.start(30)
-
-            self.pause_button.setText("Pause")
+            self.pause_button.setText(
+                "Pause"
+            )
 
             self.is_running = True
+
+    def parameters_changed(self):
+
+        self.update_inputs()
+
+        self.update_waveforms()
 
     def update_inputs(self):
 
         self.msg_freq_input.setText(
-            str(self.msg_freq_slider.value())
+            str(
+                self.msg_freq_slider.value()
+            )
         )
 
         self.carrier_freq_input.setText(
-            str(self.carrier_freq_slider.value())
+            str(
+                self.carrier_freq_slider.value()
+            )
         )
 
         self.mod_index_input.setText(
-            str(self.mod_index_slider.value() / 10)
+            str(
+                self.mod_index_slider.value() / 10
+            )
         )
 
         self.msg_amp_input.setText(
-            str(self.msg_amp_slider.value())
+            str(
+                self.msg_amp_slider.value()
+            )
         )
 
     def update_sliders(self):
@@ -364,44 +568,78 @@ class FMWindow(QWidget):
         try:
 
             self.msg_freq_slider.setValue(
-                int(self.msg_freq_input.text())
+                int(
+                    self.msg_freq_input.text()
+                )
             )
 
             self.carrier_freq_slider.setValue(
-                int(self.carrier_freq_input.text())
+                int(
+                    self.carrier_freq_input.text()
+                )
             )
 
             self.mod_index_slider.setValue(
-                int(float(self.mod_index_input.text()) * 10)
+                int(
+                    float(
+                        self.mod_index_input.text()
+                    ) * 10
+                )
             )
 
             self.msg_amp_slider.setValue(
-                int(self.msg_amp_input.text())
+                int(
+                    self.msg_amp_input.text()
+                )
             )
+
+            self.update_waveforms()
 
         except:
 
             pass
 
-    def mouse_moved(self, pos):
+    def message_mouse_moved(self, pos):
+
+        vb = self.message_plot.plotItem.vb
+
+        point = vb.mapSceneToView(pos)
+
+        self.cursor_label.setText(
+
+            f"[MESSAGE]   Time: {point.x():.4f} s    Amplitude: {point.y():.4f}"
+
+        )
+
+    def carrier_mouse_moved(self, pos):
+
+        vb = self.carrier_plot.plotItem.vb
+
+        point = vb.mapSceneToView(pos)
+
+        self.cursor_label.setText(
+
+            f"[CARRIER]   Time: {point.x():.4f} s    Amplitude: {point.y():.4f}"
+
+        )
+
+    def fm_mouse_moved(self, pos):
 
         vb = self.fm_plot.plotItem.vb
 
         point = vb.mapSceneToView(pos)
 
-        x = point.x()
-
-        y = point.y()
-
         self.cursor_label.setText(
 
-            f"Time: {x:.3f} s    Amplitude: {y:.3f}"
+            f"[FM SIGNAL]   Time: {point.x():.4f} s    Amplitude: {point.y():.4f}"
 
         )
 
     def update_waveforms(self):
 
-        self.phase += 0.1
+        if self.is_running:
+
+            self.phase += 0.1
 
         # PARAMETERS
         fm = self.msg_freq_slider.value()
@@ -413,16 +651,26 @@ class FMWindow(QWidget):
         amplitude = self.msg_amp_slider.value()
 
         # TIME
-        t = np.linspace(0, 1, 3000)
+        t = np.linspace(
+            -0.2,
+            1.2,
+            7000
+        )
 
         # MESSAGE SIGNAL
         message = amplitude * np.sin(
-            2 * np.pi * fm * t + self.phase
+
+            2 * np.pi * fm * t +
+
+            self.phase
+
         )
 
         # CARRIER SIGNAL
         carrier = np.cos(
+
             2 * np.pi * fc * t
+
         )
 
         # FM SIGNAL
@@ -431,9 +679,16 @@ class FMWindow(QWidget):
             2 * np.pi * fc * t +
 
             beta * np.sin(
-                2 * np.pi * fm * t + self.phase
+                2 * np.pi * fm * t +
+                self.phase
             )
 
+        )
+
+        # UPDATE RANGES
+        self.message_plot.setYRange(
+            -amplitude - 1,
+            amplitude + 1
         )
 
         # UPDATE CURVES
