@@ -1,6 +1,7 @@
 import sys
 from gui.analog.am_window import AMWindow
-
+from gui.analog.fm_window import FMWindow
+from gui.analog.pm_window import PMWindow
 from PySide6.QtWidgets import (
     QWidget,
     QPushButton,
@@ -48,7 +49,9 @@ class HomePage(QWidget):
         am_btn = QPushButton("AM")
         am_btn.clicked.connect(self.open_am_window)
         fm_btn = QPushButton("FM")
+        fm_btn.clicked.connect(self.open_fm_window)
         pm_btn = QPushButton("PM")
+        pm_btn.clicked.connect(self.open_pm_window)
 
         grid.addWidget(am_btn, 1, 0)
         grid.addWidget(fm_btn, 1, 1)
@@ -86,3 +89,9 @@ class HomePage(QWidget):
     def open_am_window(self):
         self.am_window = AMWindow()
         self.am_window.show()
+    def open_fm_window(self):
+        self.fm_window = FMWindow()
+        self.fm_window.show()
+    def open_pm_window(self):
+        self.pm_window = PMWindow()
+        self.pm_window.show()
